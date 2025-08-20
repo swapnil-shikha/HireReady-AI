@@ -11,7 +11,7 @@ LLM_MODEL = os.getenv("LLM_MODEL", "mistral/mistral-large-latest")
 MAX_RETRIES = 5
 RETRY_DELAY = 10  # seconds
 
-def get_response_from_llm(prompt):
+def get_response_from_llm(prompt: str) -> str:
     """
     Calls the LLM and returns the response.
     Retries automatically if rate limit is hit.
@@ -20,7 +20,7 @@ def get_response_from_llm(prompt):
         prompt (str): The string to prompt the LLM with.
 
     Returns:
-        str: The response from the LLM.
+        str: The raw response from the LLM.
     """
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -40,20 +40,34 @@ def get_response_from_llm(prompt):
                     "Mistral API rate limit exceeded after multiple retries. "
                     "Please try again later or upgrade your plan."
                 )
+        except Exception as e:
+            raise RuntimeError(f"LLM request failed: {str(e)}")
 
-def parse_json_response(response):
+
+def parse_json_response(response: str) -> dict:
     """
-    Safely parse JSON response from LLM.
+    Safely parse JSON response from LLM. Returns fallback dictionary if parsing fails.
 
     Args:
         response (str): The raw LLM response.
 
     Returns:
-        dict or None: Parsed JSON, or None if parsing fails.
+        dict: Parsed JSON or safe fallback dictionary.
     """
     try:
-        # Remove code fences if present
+        # Remove possible code fences
         cleaned = response.strip().lstrip("```json").rstrip("```")
-        return json.loads(cleaned)
+        parsed = json.loads(cleaned)
+        # Ensure essential keys exist
+        if not isinstance(parsed, dict):
+            parsed = {}
+        if "next_question" not in parsed:
+            parsed["next_question"] = response
+        if "feedback" not in parsed:
+            parsed["feedback"] = response
+        if "score" not in parsed:
+            parsed["score"] = 0
+        return parsed
     except json.JSONDecodeError:
-        return None
+        # Fallback dictionary
+        return {"next_question": response, "feedback": response, "score": 0}
