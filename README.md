@@ -1,103 +1,44 @@
-# 🤖 AI Interview System
+🧠 Interview Coach AI
 
-An intelligent interview platform that conducts automated job interviews using AI. The system analyzes candidate resumes, asks relevant questions, and provides detailed feedback and scoring.
+Interview Coach AI is your ultimate interview sidekick 🎯. It turns your resume into a personalized practice session, asking tailored questions, evaluating your spoken answers, and giving detailed feedback—so you can walk into any interview confident and prepared.
 
-## ✨ Features
+🌟 Highlights
 
-- **Resume Analysis**: Upload your PDF resume and get key highlights extracted automatically
-- **Personalized Questions**: AI generates interview questions based on your resume and the job description
-- **Voice Interaction**: Speak your answers naturally - the system will transcribe and analyze them
-- **Real-time Chat**: Chat interface showing the conversation flow
-- **Intelligent Scoring**: Get detailed feedback and scores for each answer
-- **Complete Evaluation**: Receive an overall interview score and comprehensive report
+Resume Insights 📄 – Upload your PDF and instantly extract career highlights.
 
-## 🚀 How It Works
+Tailored Questions ✨ – AI generates questions based on your experience and the role.
 
-### 1. Setup
-- Upload your resume (PDF format)
-- Paste the job description you're applying for
-- Select Maximum number of Questions (Optional)
-- Select AI Interviewer Voice (Optional)
-- Click "Submit" to process your information
+Voice Interaction 🎙️ – Speak naturally; answers are transcribed and analyzed in real time.
 
-### 2. Interview Process
-- Click "Start Interview" to begin
-- The AI will greet you and ask the first question
-- Listen to each question (text-to-speech enabled)
-- Record your answer using the audio recorder **(Make sure to use Chrome Browser Only)**
-- The system transcribes and analyzes your response
-- Receive the next question based on your previous answers
+Dynamic Interview Flow 🔄 – Each question adapts to your previous responses.
 
-### 3. Get Results
-- Complete selected number interview questions
-- Receive detailed feedback for each answer
-- Get an overall interview score out of 10
-- Review the complete chat history and evaluation report
+Instant Scoring & Feedback 🏆 – Get scores, improvement tips, and suggestions.
 
-## 🎯 What Makes It Special
+Full Transcript & Report 📊 – Review your session, track progress, and master your performance.
 
-- **Adaptive Questioning**: Each question builds on your previous answers
-- **Natural Conversation**: Feels like talking to a real interviewer
-- **Detailed Feedback**: Understand what you did well and areas for improvement
-- **Professional Interface**: Clean, easy-to-use chat-based design
-- **Complete Documentation**: Full interview transcript and scoring breakdown
+🚀 How It Works
 
-## 📋 Requirements
-- Internet connection for AI processing
-- Microphone access for recording answers
-- PDF resume file
-- Job description text
-- LLM API key for AI processing
-    - Supported Models (LiteLLM): https://docs.litellm.ai/docs/providers (Change LLM_MODEL in .env)
-    - Free Experimental Model from MistralAI: https://mistral.ai/
-    - Note: If you're using a different model provider such as OpenAI, be sure to update the environment variable from MISTRAL_API_KEY to OPENAI_API_KEY as per the LiteLLM guidelines.
-- Speechmatics API key for speech-to-text
-    - Speechmatics Platform: https://www.speechmatics.com/
+Setup Your Session
+Upload your resume, paste the job description, and optionally choose the number of questions or the AI interviewer’s voice.
 
-## 🎨 Interface
+Start Practicing
+Hit Start Interview, and the AI greets you like a real recruiter 👋. Listen to questions via text-to-speech and record your answers using the built-in audio recorder (Chrome recommended). Your responses are transcribed, analyzed, and scored on the spot.
 
-The system features a modern chat interface similar to ChatGPT:
-- **AI Interviewer** messages appear on the left (questions and instructions)
-- **Your responses** appear on the right (transcribed from audio)
-- **Progress tracker** shows which question you're on
-- **Audio recorder** for easy voice input
+Get Feedback & Improve
+Every answer receives a score (0–10) and detailed feedback with actionable tips. Complete the session to get a full transcript, an overall score, and personalized recommendations to refine your answers.
 
-## 📊 Scoring System
+💡 Why It’s Special
 
-Each answer receives:
-- Individual score (0-10)
-- Detailed written feedback
-- Suggestions for improvement
+Adaptive & Smart 🤖 – Each question evolves based on your answers.
 
-Final results include:
-- Overall interview score
-- Question-by-question breakdown
-- Complete conversation history
-- Personalized recommendations
+Feels Real 🗣️ – A natural conversation flow that simulates a live interview.
 
-## 🚀 How to run in local environment.
-1.  Clone the repository
-2. Create a virtual environment
-3. Install dependencies inside the virtual environment.
-4. Add environment variables (.env.example) like API keys
-5. Run the application.
+Track Progress 📈 – Take multiple sessions to see how you improve.
 
+User-Friendly Design 🎨 – Clean, chat-based interface with progress tracking.
 
-## 🔄 Multiple Interviews
+Safe Practice Space 🛡️ – Learn, experiment, and make mistakes without pressure.
 
-- Take multiple practice interviews
-- Try different job descriptions
-- Track your improvement over time
-- Perfect your interview skills
+🏁 Take Your Interview Skills to the Next Level
 
-## 💡 Tips for Best Results
-
-- Speak clearly when recording answers
-- Provide detailed, specific responses
-- Take your time - there's no rush
-- Treat it like a real interview
-- Review feedback to improve
-
----
-
-*Ready to ace your next interview? Upload your resume and get started!*
+Speak confidently, structure your answers, and treat each session like the real thing. With Interview Coach AI, every practice round brings you closer to acing your next interview 🥇. Perfect for first-timers or seasoned professionals, it’s your go-to tool for preparation, growth, and success.
