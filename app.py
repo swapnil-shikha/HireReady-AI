@@ -1,17 +1,13 @@
 from dotenv import load_dotenv
-import os
-
-# Load .env file
 load_dotenv()
 
-# Optional: check if API key is loaded
-print("Mistral API Key loaded:", os.getenv("MISTRAL_API_KEY"))
+import os
+import asyncio
+from datetime import datetime
 
 import streamlit as st
-import asyncio
-import os
-import time
-from datetime import datetime
+
+# ---- Your existing utils (unchanged) ----
 from utils import (
     transcribe_with_speechmatics,
     extract_resume_info_using_llm,
@@ -25,40 +21,159 @@ from utils import (
     load_content_streamlit,
 )
 
+# --------------------
+# App Constants
+# --------------------
 MAX_QUESTIONS = 5
 
+VOICE_CARDS = {
+    "Zephyr (Bright)": {"icon": "🎙️", "tag": "US • Bright", "code": "en-US-ZephyrNeural"},
+    "Puck (Upbeat)": {"icon": "🎶", "tag": "US • Upbeat", "code": "en-US-PuckNeural"},
+    "Callirrhoe (Easy-going)": {"icon": "🤙", "tag": "US • Casual", "code": "en-US-CallirrhoeNeural"},
+    "Algieba (Smooth)": {"icon": "🗣️", "tag": "US • Clear", "code": "en-US-AlgiebaNeural"},
+}
 
-# Configuration and Styling
+# --------------------
+# Page Setup + Global Styles
+# --------------------
 def setup_page_config():
-    """Setup page configuration and custom CSS"""
-    st.set_page_config(page_title="AI Interview App", layout="wide")
+    st.set_page_config(page_title="Interview Coach AI", page_icon="📝", layout="centered")
 
-    st.markdown(
-        """
+    st.markdown("""
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-    .audio-section {
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        padding: 20px;
-        margin-top: 20px;
-        text-align: center;
-        border: 2px solid #e9ecef;
-    }
-    .interview-progress {
-        background-color: #e8f5e8;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
+        :root {
+            --bg: #f8f9fa; /* Light background */
+            --card-bg: #ffffff; /* White card */
+            --text-color: #212529; /* Dark text */
+            --primary: #4a55e2; /* Indigo/Blue */
+            --primary-light: #e0e7ff;
+            --secondary: #6c757d;
+            --accent: #ff6b6b; /* Red accent */
+            --shadow: rgba(0, 0, 0, 0.08);
+            --border-color: rgba(0,0,0,.1);
+        }
+        html, body, [class*="css"] {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg);
+            color: var(--text-color);
+        }
+        .block-container { max-width: 800px; padding: 2rem 1rem; }
+        h1, h2, h3, h4, h5, h6 { color: var(--text-color); }
+        
+        /* Main container and cards */
+        .container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 15px 30px var(--shadow);
+            margin-bottom: 2rem;
+            transition: box-shadow .3s ease;
+        }
+        .container:hover { box-shadow: 0 20px 40px rgba(0,0,0,.12); }
+
+        /* Buttons and inputs */
+        .stButton>button {
+            border-radius: 999px;
+            font-weight: 600;
+            padding: 10px 24px;
+            transition: all .2s ease;
+        }
+        .stButton>button:hover { transform: translateY(-1px); }
+        
+        .stButton>button[kind="primary"] {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+        .stButton>button[kind="secondary"] {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border: none;
+        }
+        .st-emotion-cache-12oz5g7 {
+            padding-top: 2rem !important;
+            padding-bottom: 3.5rem !important;
+        }
+
+        /* Voice cards */
+        .voice-card-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .voice-card {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all .2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: #f1f3f5;
+        }
+        .voice-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .voice-card.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        .voice-icon { font-size: 2rem; margin-bottom: 8px; }
+        .voice-title { font-weight: 600; font-size: 1rem; color: var(--text-color); }
+        .voice-tag { font-size: 0.8rem; color: var(--secondary); }
+
+        /* Stepper */
+        .stepper { display:flex; gap: 8px; align-items:center; margin: 10px 0 20px 0; justify-content: center; }
+        .step {
+            display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px;
+            background: rgba(0,0,0,.05); color: var(--secondary); font-size:14px; font-weight: 500;
+            transition: background .2s ease, color .2s ease;
+        }
+        .step.active {
+            color: white;
+            background: var(--primary);
+        }
+
+        /* Messages */
+        .stChatMessage {
+            background: var(--primary-light);
+            border-radius: 16px 16px 16px 0;
+            padding: 1rem;
+            color: var(--text-color);
+            margin-bottom: 12px;
+        }
+        .stChatMessage:last-of-type {
+            margin-bottom: 0;
+        }
+        
+        /* Floating Button */
+        .fab-wrap{
+            position:fixed;
+            right: 50%;
+            transform: translateX(50%);
+            bottom:24px;
+            z-index:999;
+            width: fit-content;
+        }
+        .fab {
+            background-color: var(--primary);
+            color: white;
+            border:none;
+            border-radius:999px;
+            padding:1rem 2rem;
+            font-weight:700;
+            box-shadow: 0 10px 20px rgba(0,0,0,.2);
+            cursor:pointer;
+            transition: transform .15s ease, box-shadow .2s ease;
+        }
+        .fab:hover { transform: translateY(-2px); box-shadow:0 14px 25px rgba(0,0,0,.25); }
     </style>
-    """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-
+# --------------------
+# Session State
+# --------------------
 def initialize_session_state():
-    """Initialize all session state variables"""
     defaults = {
         "interview_started": False,
         "name": "",
@@ -73,319 +188,168 @@ def initialize_session_state():
         "messages": [],
         "interview_completed": False,
         "max_questions": MAX_QUESTIONS,
-        "ai_voice": "Alex (Male)",
+        "ai_voice": "Zephyr (Bright)",
         "thanks_message_prepared": False,
         "thanks_message_spoken": False,
         "show_final_results": False,
+        "uploaded_resume": None,
     }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-
+# --------------------
+# Helpers
+# --------------------
 def get_ai_voice_details():
-    """Get AI voice configuration"""
-    return {
-        "Alex (Male)": {"name": "Alex", "code": "en-US-GuyNeural"},
-        "Aria (Female)": {"name": "Aria", "code": "en-US-AriaNeural"},
-        "Natasha (Female)": {"name": "Natasha", "code": "en-AU-NatashaNeural"},
-        "Sonia (Female)": {"name": "Sonia", "code": "en-GB-SoniaNeural"},
-    }
+    return {k: {"name": k.split(" ")[0], "code": VOICE_CARDS[k]["code"]} for k in VOICE_CARDS}
 
-def get_instructions():
-    """Get instructions for the user"""
-    content = """
-    #### Please follow these steps to use the AI Interview App:
-    1. **Upload Resume**: Upload your resume in PDF format.
-    2. **Job Description**: Paste the job description.
-    3. **Start Interview**: Click the "Start Interview" button to begin the AI-driven interview.
-    4. **Maximum Questions**: You can set the maximum number of questions for the interview. (default: 5)
-    5. **Voice Selection**: Choose the AI voice for the interview.(default: Alex (Male))
-    6. **Answer Questions**: Answer the questions posed by the AI interviewer.
-    7. **Review Results**: After the interview, review your performance and feedback.
-
-    **Note**: The AI interviewer will ask you questions based on your resume and the job description.
-
-    I hope you find the experience helpful!
-    """
-    return st.markdown(content)
-
-def render_sidebar():
-    """Render sidebar with candidate information and settings"""
-    st.sidebar.title("Candidate Information")
-
-    # File upload
-    uploaded_resume = st.sidebar.file_uploader("Upload your Resume (PDF)", type=["pdf"])
-
-    # Job description
-    job_description = st.sidebar.text_area("Paste the Job Description")
-
-    # Settings
-    max_questions = st.sidebar.number_input(
-        "Maximum number of questions",
-        min_value=1,
-        max_value=10,
-        value=MAX_QUESTIONS,
-    )
-    st.session_state["max_questions"] = max_questions
-
-    ai_voice = st.sidebar.radio(
-        "Select AI Interviewer Voice",
-        ["Alex (Male)", "Aria (Female)", "Natasha (Female)", "Sonia (Female)"],
-    )
-    st.session_state["ai_voice"] = ai_voice
-
-    submit = st.sidebar.button("Submit")
-
-    return uploaded_resume, job_description, submit
-
+def reset_interview_state():
+    for key in [
+        "interview_started","qa_index","conversations","current_question","question_spoken",
+        "awaiting_response","processing_audio","messages","interview_completed",
+        "thanks_message_prepared","thanks_message_spoken","show_final_results",
+    ]:
+        if key in ["qa_index"]:
+            st.session_state[key] = 1
+        elif key in ["conversations","messages"]:
+            st.session_state[key] = []
+        else:
+            st.session_state[key] = False
+    st.session_state["current_question"] = ""
 
 def process_resume_submission(uploaded_resume, job_description):
-    """Process resume and job description submission"""
-    with st.spinner("Processing resume..."):
+    with st.spinner("Analyzing your resume and the job description..."):
         resume_content = load_content_streamlit(uploaded_resume)
         name, resume_highlights = extract_resume_info_using_llm(resume_content)
-
-    # Store in session state
     st.session_state["name"] = name
     st.session_state["resume_highlights"] = resume_highlights
     st.session_state["job_description"] = job_description
-
-    # Reset interview state
     reset_interview_state()
-
-    st.success(f"Candidate Name: {name}")
-
-
-def reset_interview_state():
-    """Reset interview-related session state"""
-    interview_keys = [
-        "interview_started",
-        "qa_index",
-        "conversations",
-        "current_question",
-        "question_spoken",
-        "awaiting_response",
-        "processing_audio",
-        "messages",
-        "interview_completed",
-        "thanks_message_prepared",
-        "thanks_message_spoken",
-        "show_final_results",
-    ]
-
-    for key in interview_keys:
-        if key == "interview_started" or key == "interview_completed":
-            st.session_state[key] = False
-        elif key in ["qa_index"]:
-            st.session_state[key] = 1
-        elif key in ["conversations", "messages"]:
-            st.session_state[key] = []
-        elif key in ["current_question"]:
-            st.session_state[key] = ""
-        else:
-            st.session_state[key] = False
-
+    st.success(f"Great! We've got it. Your name is **{name}**, and we're ready to roll.")
 
 def start_interview():
-    """Initialize and start the interview"""
     st.session_state["interview_started"] = True
     reset_interview_state()
-    st.session_state["interview_started"] = True  # Reset above sets this to False
-
-    # Get greeting message
+    st.session_state["interview_started"] = True
     ai_voice_details = get_ai_voice_details()
     interviewer_name = ai_voice_details[st.session_state["ai_voice"]]["name"]
-    greeting_message = get_ai_greeting_message(
-        st.session_state["name"], interviewer_name=interviewer_name
-    )
-
+    greeting_message = get_ai_greeting_message(st.session_state["name"], interviewer_name=interviewer_name)
     st.session_state["current_question"] = greeting_message
-    st.session_state["messages"].append(
-        {"role": "assistant", "content": greeting_message}
-    )
-
+    st.session_state["messages"].append({"role":"assistant","content":greeting_message})
 
 def display_chat_messages():
-    """Display all chat messages from history"""
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-
 def speak_current_question():
-    """Speak the current question if not already spoken"""
     if st.session_state["current_question"] and not st.session_state["question_spoken"]:
-        with st.spinner("AI Interviewer is speaking..."):
-            ai_voice_details = get_ai_voice_details()
-            speak_text(
-                st.session_state["current_question"],
-                voice=ai_voice_details[st.session_state["ai_voice"]]["code"],
-            )
+        with st.spinner("The AI is asking the next question..."):
+            code = get_ai_voice_details()[st.session_state["ai_voice"]]["code"]
+            speak_text(st.session_state["current_question"], voice=code)
         st.session_state["question_spoken"] = True
         st.session_state["awaiting_response"] = True
         st.rerun()
 
-
 def generate_next_question():
-    """Generate and prepare the next question"""
     if st.session_state["conversations"]:
-        last_conv = st.session_state["conversations"][-1]
-        next_question, _ = asyncio.run(analyze_candidate_response_and_generate_new_question(
-            last_conv["Question"],
-            last_conv["Candidate Answer"],
-            st.session_state["job_description"],
-            st.session_state["resume_highlights"],
+        last = st.session_state["conversations"][-1]
+        next_q, _ = asyncio.run(analyze_candidate_response_and_generate_new_question(
+            last["Question"], last["Candidate Answer"],
+            st.session_state["job_description"], st.session_state["resume_highlights"]
         ))
     else:
-        next_question = "Tell me about yourself and your experience."
-
-    st.session_state["current_question"] = next_question
-    st.session_state["messages"].append({"role": "assistant", "content": next_question})
+        next_q = "Tell me about yourself and your experience."
+    st.session_state["current_question"] = next_q
+    st.session_state["messages"].append({"role":"assistant","content":next_q})
     st.session_state["question_spoken"] = False
     st.session_state["awaiting_response"] = False
 
-
 def process_candidate_response(transcript):
-    """Process candidate's response and move to next state"""
-    # Add candidate's answer to chat
-    st.session_state["messages"].append({"role": "user", "content": transcript})
-
-    # Generate feedback for this response
+    st.session_state["messages"].append({"role":"user","content":transcript})
     if st.session_state["qa_index"] < st.session_state["max_questions"] - 1:
-        # Not the last question - generate next question and feedback
-        next_question, feedback = asyncio.run(analyze_candidate_response_and_generate_new_question(
-            st.session_state["current_question"],
-            transcript,
-            st.session_state["job_description"],
-            st.session_state["resume_highlights"],
+        next_q, feedback = asyncio.run(analyze_candidate_response_and_generate_new_question(
+            st.session_state["current_question"], transcript,
+            st.session_state["job_description"], st.session_state["resume_highlights"]
         ))
     else:
-        # Last question - only generate feedback
         feedback = asyncio.run(get_feedback_of_candidate_response(
-            st.session_state["current_question"],
-            transcript,
-            st.session_state["job_description"],
-            st.session_state["resume_highlights"],
+            st.session_state["current_question"], transcript,
+            st.session_state["job_description"], st.session_state["resume_highlights"]
         ))
+        next_q = None
 
-    # Store conversation
-    st.session_state["conversations"].append(
-        {
-            "Question": st.session_state["current_question"],
-            "Candidate Answer": transcript,
-            "Evaluation": feedback["score"],
-            "Feedback": feedback["feedback"],
-        }
-    )
+    st.session_state["conversations"].append({
+        "Question": st.session_state["current_question"],
+        "Candidate Answer": transcript,
+        "Evaluation": feedback["score"],
+        "Feedback": feedback["feedback"],
+    })
 
-    # Move to next question or complete interview
     st.session_state["qa_index"] += 1
     st.session_state["processing_audio"] = False
     st.session_state["awaiting_response"] = False
 
     if st.session_state["qa_index"] <= st.session_state["max_questions"]:
-        # Prepare next question
-        generate_next_question()
-        st.success("✅ Answer recorded! Preparing next question...")
+        if next_q:
+            st.session_state["current_question"] = next_q
+            st.session_state["messages"].append({"role":"assistant","content":next_q})
+            st.session_state["question_spoken"] = False
+        st.success("✅ Your answer was recorded! Preparing the next question...")
     else:
-        # Interview completed - prepare thanks message
         st.session_state["interview_completed"] = True
         prepare_thanks_message()
 
-
 def prepare_thanks_message():
-    """Prepare and display thanks message"""
     if not st.session_state["thanks_message_prepared"]:
         final_note = get_final_thanks_message(st.session_state["name"])
-        st.session_state["messages"].append(
-            {"role": "assistant", "content": final_note}
-        )
+        st.session_state["messages"].append({"role":"assistant","content":final_note})
         st.session_state["thanks_message_prepared"] = True
         st.session_state["qa_index"] -= 1
         st.rerun()
 
-
 def speak_thanks_message():
-    """Speak the thanks message"""
-    if (
-        st.session_state["thanks_message_prepared"]
-        and not st.session_state["thanks_message_spoken"]
-    ):
-
-        # Get the last message (thanks message)
-        thanks_message = st.session_state["messages"][-1]["content"]
-
-        with st.spinner("AI Interviewer is giving final remarks..."):
-            ai_voice_details = get_ai_voice_details()
-            speak_text(
-                thanks_message,
-                voice=ai_voice_details[st.session_state["ai_voice"]]["code"],
-            )
-
+    if st.session_state["thanks_message_prepared"] and not st.session_state["thanks_message_spoken"]:
+        with st.spinner("Wrapping things up..."):
+            code = get_ai_voice_details()[st.session_state["ai_voice"]]["code"]
+            speak_text(st.session_state["messages"][-1]["content"], voice=code)
         st.session_state["thanks_message_spoken"] = True
-        st.success("🎉 Interview completed! Thank you for your time.")
-
-        # Now show final results
+        st.success("🎉 All done! Thanks for your time!")
         st.session_state["show_final_results"] = True
         st.rerun()
 
-
 def handle_audio_recording():
-    """Handle audio recording and processing"""
-    if not (
-        st.session_state["awaiting_response"]
-        and not st.session_state["processing_audio"]
-    ):
+    if not (st.session_state["awaiting_response"] and not st.session_state["processing_audio"]):
         return
-
-    st.write("**🎙️ Please record your answer to the question above**")
-
+    st.info("🎙️ We're listening! Record your answer now.")
     audio_key = f"audio_input_{st.session_state['qa_index']}_{len(st.session_state['messages'])}"
     audio_data = st.audio_input("Record your answer", key=audio_key)
-
     if audio_data is not None:
         st.session_state["processing_audio"] = True
-
-        with st.spinner("Processing your answer..."):
-            # Save audio file
-            name = st.session_state["name"]
+        with st.spinner("Transcribing your answer..."):
+            name = st.session_state["name"] or "candidate"
             filename = f"audio/{name}/{name}_{st.session_state['qa_index'] + 1}.wav"
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-
             with open(filename, "wb") as f:
                 f.write(audio_data.read())
-
-            # Transcribe audio
             transcript = transcribe_with_speechmatics(filename)
-
             if transcript and transcript.strip():
                 process_candidate_response(transcript)
                 st.rerun()
             else:
-                st.error("No speech detected in audio. Please try recording again.")
-                st.session_state["processing_audio"] = False
-
+                st.error("Oops! No speech detected. Could you try recording again?")
+            st.session_state["processing_audio"] = False
 
 def display_final_results():
-    """Display final interview results"""
-    if (
-        not st.session_state["show_final_results"]
-        or not st.session_state["conversations"]
-    ):
+    if not (st.session_state["show_final_results"] and st.session_state["conversations"]):
         return
-
-    with st.spinner("Calculating final score..."):
+    with st.spinner("Calculating your final score..."):
         final_score = get_overall_evaluation_score(st.session_state["conversations"])
-
-        # Save interview data
-        now = datetime.now().isoformat() + "Z"
+        now = datetime.now().isoformat()+"Z"
         interview_data = {
             "name": st.session_state["name"],
-            "createdAt": now,
-            "updatedAt": now,
-            "id": 1,
+            "createdAt": now, "updatedAt": now, "id": 1,
             "job_description": st.session_state["job_description"],
             "resume_highlights": st.session_state["resume_highlights"],
             "conversations": st.session_state["conversations"],
@@ -393,86 +357,136 @@ def display_final_results():
         }
         save_interview_data(interview_data, candidate_name=st.session_state["name"])
 
-    # Display results
-    st.subheader("🎉 Interview Results")
-    st.markdown(f"**Candidate:** {st.session_state['name']}")
-    st.markdown(f"**Overall Score:** {final_score:.2f}/10")
+    st.markdown("### 🌟 Your Final Evaluation")
+    st.markdown("Here's a quick look at your performance. You did great!")
+    st.markdown(f"**Overall Score:** `{final_score:.2f} / 10`")
 
-    # Show detailed summary
-    st.subheader("Detailed Interview Summary")
     for i, conv in enumerate(st.session_state["conversations"], 1):
-        with st.expander(f"Question {i} (Score: {conv['Evaluation']}/10)"):
+        with st.expander(f"Question {i} • Score: {conv['Evaluation']}/10"):
             st.write(f"**Q:** {conv['Question']}")
-            st.write(f"**A:** {conv['Candidate Answer']}")
+            st.write(f"**Your Answer:** {conv['Candidate Answer']}")
             st.write(f"**Feedback:** {conv['Feedback']}")
 
-    # New interview option
-    if st.button("Start New Interview"):
+    if st.button("🔄 Start a New Interview"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
 
+def render_stepper(active_step:int):
+    steps = ["Upload Resume", "Set Preferences", "Start Interview"]
+    html = '<div class="stepper">' + "".join(
+        [f'<div class="step {"active" if i==active_step else ""}">Step {i+1}: {label}</div>' for i, label in enumerate(steps)]
+    ) + "</div>"
+    st.markdown(html, unsafe_allow_html=True)
 
-def render_interview_progress():
-    """Render interview progress indicator"""
-    if st.session_state.get("interview_started", False):
-        progress_text = f"Question {st.session_state['qa_index']} of {st.session_state['max_questions']}"
-        st.markdown(
-            f'<div class="interview-progress"><strong>{progress_text}</strong></div>',
-            unsafe_allow_html=True,
-        )
-
-
+# --------------------
+# Main Application
+# --------------------
 def main():
-    """Main application function"""
-    # Setup
     setup_page_config()
     initialize_session_state()
 
-    # Header
-    st.title("🤖 AI Interview System")
-    insturctions = st.empty()
-    if not  st.session_state["interview_started"]:
-        insturctions = get_instructions()
+    st.title("Interview Coach AI")
+    st.markdown("Your friendly guide to acing your next interview!")
 
-    # Sidebar
-    uploaded_resume, job_description, submit = render_sidebar()
-
-    # Process submission
-    if submit and uploaded_resume and job_description:
-        insturctions.empty()
-        process_resume_submission(uploaded_resume, job_description)
+    # Tabbed Sections
+    tabs = st.tabs(["📋 Setup", "📝 Interview", "🏁 Results"])
+    
+    with tabs[0]:
+        render_stepper(0)
+        st.header("Step 1: Your Info")
         
+        st.markdown("Tell me a bit about the role you're applying for and what you bring to the table. This helps the AI personalize your interview!")
+        st.session_state["uploaded_resume"] = st.file_uploader(
+            "Upload your resume (PDF)", type=["pdf"], help="Drag & drop supported.",
+        )
+        jd = st.text_area(
+            "Job Description",
+            placeholder="Paste the job description here…",
+            height=200,
+        )
+        if st.session_state["uploaded_resume"] and jd.strip():
+            st.session_state["job_description"] = jd
+            if st.button("🎉 Ready to Analyze!", use_container_width=True):
+                process_resume_submission(st.session_state["uploaded_resume"], st.session_state["job_description"])
+        else:
+            st.info("Psst... You need to upload both a resume and a job description to get started!")
 
-    # Start interview button
-    if st.session_state["name"] and not st.session_state["interview_started"]:
-        if st.button("Start Interview"):
-            start_interview()
+    with tabs[1]:
+        render_stepper(1)
+        st.header("Step 2: Customize Your Interview")
+        st.markdown("Choose how many questions you'd like to practice with and pick the voice of your AI interviewer.")
+        st.session_state["max_questions"] = st.slider(
+            "Number of questions", 1, 10, st.session_state.get("max_questions", MAX_QUESTIONS)
+        )
+
+        st.subheader("Pick a Voice")
+        st.markdown("Click on a card to select your interviewer's voice.")
+        
+        cols = st.columns(len(VOICE_CARDS))
+        keys = list(VOICE_CARDS.keys())
+        for i, key in enumerate(keys):
+            with cols[i]:
+                is_active = "selected" if key == st.session_state["ai_voice"] else ""
+                st.markdown(
+                    f"""
+                    <div class="voice-card {is_active}" onclick="window.dispatchEvent(new CustomEvent('voice_select', {{ detail: '{key}' }}));">
+                        <div class="voice-icon">{VOICE_CARDS[key]['icon']}</div>
+                        <div class="voice-title">{key}</div>
+                        <div class="voice-tag">{VOICE_CARDS[key]['tag']}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        
+        # This will be used to update the session state
+        voice_js = """
+            <script>
+            const voiceCards = document.querySelectorAll('.voice-card');
+            voiceCards.forEach(card => {
+                card.onclick = (e) => {
+                    const voiceName = e.currentTarget.querySelector('.voice-title').innerText;
+                    window.parent.document.querySelector('[data-testid="stHiddenInput"]').value = voiceName;
+                    window.parent.document.querySelector('[data-testid="stHiddenInput"]').dispatchEvent(new Event('change'));
+                };
+            });
+            </script>
+        """
+        st.markdown(voice_js, unsafe_allow_html=True)
+        
+        selected_voice = st.text_input("Selected voice (hidden)", value=st.session_state["ai_voice"], key="voice_select_input")
+        if selected_voice != st.session_state["ai_voice"]:
+            st.session_state["ai_voice"] = selected_voice
             st.rerun()
 
-    # Interview section
-    if st.session_state.get("interview_started", False):
-        render_interview_progress()
+        if st.session_state["name"]:
+            st.markdown(f"<div class='container' style='background-color:#d4edda; color:#155724; border-color:#c3e6cb;'>You're all set, <b>{st.session_state['name']}</b>! Press the button below to start.</div>", unsafe_allow_html=True)
+            if st.button("🚀 Start Interview!", use_container_width=True):
+                start_interview()
+                st.rerun()
 
-        # Show chat history
-        st.subheader("Interview Chat")
-        display_chat_messages()
-
-        # Handle different interview states
-        if not st.session_state["interview_completed"]:
-            # Active interview
-            speak_current_question()
-            handle_audio_recording()
-        elif not st.session_state["thanks_message_prepared"]:
-            # Interview just completed - prepare thanks
-            prepare_thanks_message()
-        elif not st.session_state["thanks_message_spoken"]:
-            # Thanks message prepared but not spoken
-            speak_thanks_message()
+    with tabs[2]:
+        render_stepper(2)
+        if st.session_state["interview_started"]:
+            st.header("Step 3: Interview Chat")
+            st.markdown("This is where the magic happens! Your AI coach will guide you through the interview.")
+            
+            progress = min(st.session_state["qa_index"] / max(st.session_state["max_questions"], 1), 1.0)
+            st.progress(progress)
+            
+            with st.container():
+                display_chat_messages()
+                if not st.session_state["interview_completed"]:
+                    speak_current_question()
+                    handle_audio_recording()
+                elif not st.session_state["thanks_message_prepared"]:
+                    prepare_thanks_message()
+                elif not st.session_state["thanks_message_spoken"]:
+                    speak_thanks_message()
+                else:
+                    display_final_results()
         else:
-            # Everything done - show results
-            display_final_results()
-
+            st.info("Your interview summary will appear here once you've completed an interview.")
 
 if __name__ == "__main__":
     main()
