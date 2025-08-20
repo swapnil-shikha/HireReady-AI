@@ -15,18 +15,21 @@ class InterviewAnalysisError(Exception):
 
 @lru_cache(maxsize=128)
 def _cache_key(prompt: str) -> str:
-    """Generate cache key for prompt (if you want to implement caching)"""
+    """Generate cache key for prompt (optional caching)"""
     return hash(prompt)
 
 async def _make_llm_call_async(prompt: str) -> Dict[str, Any]:
     """
-    Make LLM call asynchronously by running in thread pool
+    Make LLM call asynchronously in a thread pool.
+    Ensures the response is always a dictionary.
     """
     try:
         loop = asyncio.get_event_loop()
-        # Run the synchronous LLM call in a thread pool
         response = await loop.run_in_executor(executor, get_response_from_llm, prompt)
-        return parse_json_response(response)
+        parsed = parse_json_response(response)
+        if parsed is None:
+            parsed = {}
+        return parsed
     except Exception as e:
         raise InterviewAnalysisError(f"Failed to get LLM response: {str(e)}")
 
@@ -37,21 +40,15 @@ async def get_next_question(
     job_description: str
 ) -> str:
     """
-    Generate next interview question based on previous interaction
-    
-    Args:
-        previous_question: The previous question asked
-        candidate_response: Candidate's response to previous question
-        resume_highlights: Key highlights from candidate's resume
-        job_description: Job description/requirements
-        
-    Returns:
-        str: Next question to ask
-        
-    Raises:
-        InterviewAnalysisError: If question generation fails
+    Generate next interview question based on previous interaction.
     """
     try:
+        # Ensure inputs are not None
+        previous_question = previous_question or ""
+        candidate_response = candidate_response or ""
+        resume_highlights = resume_highlights or ""
+        job_description = job_description or ""
+
         final_prompt = next_question_generation.format(
             previous_question=previous_question,
             candidate_response=candidate_response,
@@ -76,47 +73,48 @@ async def get_feedback_of_candidate_response(
     resume_highlights: str
 ) -> Dict[str, Any]:
     """
-    Generate feedback for candidate's response
-    
-    Args:
-        question: The question that was asked
-        candidate_response: Candidate's response
-        job_description: Job description/requirements
-        resume_highlights: Key highlights from candidate's resume
-        
-    Returns:
-        Dict containing feedback and score
-        
-    Raises:
-        InterviewAnalysisError: If feedback generation fails
+    Generate feedback for candidate's response with safe checks.
     """
     try:
+        # Ensure inputs are not None
+        question = question or ""
+        candidate_response = candidate_response or ""
+        job_description = job_description or ""
+        resume_highlights = resume_highlights or ""
+
         final_prompt = feedback_generation.format(
             question=question,
             candidate_response=candidate_response,
             job_description=job_description,
             resume_highlights=resume_highlights,
         )
-        
+
+        # Logging for debugging
+        print("Prompt sent to LLM for feedback:", final_prompt)
+
         response = await _make_llm_call_async(final_prompt)
-        
-        # Validate response structure
+        print("Raw LLM feedback response:", response)
+
+        if not isinstance(response, dict):
+            raise InterviewAnalysisError("LLM response is not a dictionary")
+
+        # Validate required fields
         required_fields = ["feedback", "score"]
         missing_fields = [field for field in required_fields if field not in response]
         if missing_fields:
             raise InterviewAnalysisError(f"Missing fields in response: {missing_fields}")
         
-        # Validate score is numeric
+        # Validate score
         try:
             score = float(response["score"])
-            if not (0 <= score <= 10):  # assuming score is 0-10
+            if not (0 <= score <= 10):
                 print(f"Score {score} is outside expected range 0-10")
         except (ValueError, TypeError):
             raise InterviewAnalysisError(f"Invalid score format: {response['score']}")
         
         return {
             "feedback": response["feedback"],
-            "score": response["score"]
+            "score": score
         }
         
     except Exception as e:
@@ -130,24 +128,15 @@ async def analyze_candidate_response_and_generate_new_question(
     timeout: float = 30.0
 ) -> Tuple[str, Dict[str, Any]]:
     """
-    Analyze candidate response and generate next question concurrently
-    
-    Args:
-        question: The question that was asked
-        candidate_response: Candidate's response
-        job_description: Job description/requirements
-        resume_highlights: Key highlights from candidate's resume
-        timeout: Maximum time to wait for both operations
-        
-    Returns:
-        Tuple of (next_question, feedback_dict)
-        
-    Raises:
-        InterviewAnalysisError: If analysis fails
-        asyncio.TimeoutError: If operations exceed timeout
+    Analyze candidate response and generate next question concurrently.
     """
     try:
-        # Run both operations concurrently for better performance
+        # Ensure inputs are safe
+        question = question or ""
+        candidate_response = candidate_response or ""
+        job_description = job_description or ""
+        resume_highlights = resume_highlights or ""
+
         feedback_task = get_feedback_of_candidate_response(
             question, candidate_response, job_description, resume_highlights
         )
@@ -156,7 +145,6 @@ async def analyze_candidate_response_and_generate_new_question(
             question, candidate_response, resume_highlights, job_description
         )
         
-        # Wait for both with timeout
         feedback, next_question = await asyncio.wait_for(
             asyncio.gather(feedback_task, next_question_task),
             timeout=timeout
