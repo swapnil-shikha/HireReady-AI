@@ -1,43 +1,49 @@
-import asyncio
-import edge_tts
-import pygame
-import tempfile
 import os
+import requests
+import streamlit as st
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+SPEECHMATICS_API_KEY = os.getenv("SPEECHMATICS_API_KEY")
 
-async def speak_edge_tts(text, voice="en-US-AriaNeural", rate="+0%", pitch="+0Hz"):
+BASE_URL = "https://asr.api.speechmatics.com/v2"
+
+# Voice options (can be expanded)
+AI_VOICES = {
+    "male": {"name": "Alex", "code": "en-US"},
+    "female": {"name": "Emma", "code": "en-US"},
+}
+
+def get_ai_voice_details():
+    """Return available AI voices with name + code"""
+    return AI_VOICES
+
+def speak_text(text, voice="en-US"):
     """
-    High-quality TTS using Microsoft Edge voices
-
-    Popular voices:
-    - en-US-AriaNeural (female)
-    - en-US-GuyNeural (male)
-    - en-GB-SoniaNeural (British female)
-    - en-AU-NatashaNeural (Australian female)
+    Convert text to speech using Speechmatics API and play in Streamlit.
     """
+    if not SPEECHMATICS_API_KEY:
+        st.error("Speechmatics API key not found. Please set SPEECHMATICS_API_KEY in .env")
+        return
+
     try:
-        communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+        url = f"{BASE_URL}/tts"
+        headers = {"Authorization": f"Bearer {SPEECHMATICS_API_KEY}"}
+        payload = {
+            "text": text,
+            "voice": voice,
+            "format": "mp3"
+        }
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-            await communicate.save(tmp_file.name)
+        response = requests.post(url, json=payload, headers=headers)
 
-            # Play using pygame
-            pygame.mixer.init()
-            pygame.mixer.music.load(tmp_file.name)
-            pygame.mixer.music.play()
+        if response.status_code != 200:
+            st.error(f"TTS Error: {response.status_code} - {response.text}")
+            return
 
-            while pygame.mixer.music.get_busy():
-                pygame.time.wait(100)
-
-            pygame.mixer.quit()
-
-        os.unlink(tmp_file.name)
+        audio_bytes = response.content
+        st.audio(audio_bytes, format="audio/mp3")
 
     except Exception as e:
-        print(f"Edge-TTS Error: {e}")
-        print("Text:", text)
-
-
-def speak_text(text, voice="en-US-GuyNeural", rate="+0%", pitch="+0Hz"):
-    """Synchronous wrapper for Edge-TTS"""
-    asyncio.run(speak_edge_tts(text, voice, rate, pitch))
+        st.error(f"Speech synthesis failed: {e}")

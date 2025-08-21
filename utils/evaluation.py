@@ -1,21 +1,31 @@
-def get_overall_evaluation_score(conversations):
-    if not conversations:
-        return 0
-
-    total_score = 0
-    count = 0
-    for conversation in conversations:
-        if "Evaluation" in conversation:
-            total_score += conversation["Evaluation"]
-            count += 1
-    return total_score / count if count > 0 else 0
-def get_feedback_of_candidate_response(response):
+def get_feedback_of_candidate_response(response, interviewer_name=None, job_description=None, conversation_history=None):
     """
     Generate feedback for a candidate's response.
     Replace this placeholder logic with your actual evaluation code.
     """
-    if not response:
-        return "No response provided."
 
-    # Example placeholder feedback
-    return f"Candidate response received: {response}. Feedback will be generated here."
+    if not response:
+        return {
+            "Evaluation": "No response provided.",
+            "Score": 0
+        }
+
+    # Example evaluation logic
+    feedback_text = f"Candidate responded: {response}"
+
+    # Basic scoring example
+    score = 0
+    if "python" in response.lower():
+        score += 7
+    if "project" in response.lower():
+        score += 8
+    if "no" in response.lower() and "experience" in response.lower():
+        score = 3
+
+    # Make sure score doesn’t go above 10
+    score = min(score, 10)
+
+    return {
+        "Evaluation": feedback_text,
+        "Score": score
+    }

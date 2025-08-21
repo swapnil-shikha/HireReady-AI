@@ -1,28 +1,25 @@
-
-import os
-import certifi
-
 from dotenv import load_dotenv
-os.environ["SSL_CERT_FILE"] = certifi.where()
 load_dotenv()
 
-
+import os
 import asyncio
 from datetime import datetime
-import json
 
 import streamlit as st
 
-# ---- Corrected Imports based on your project's file structure ----
-from utils.transcript_audio import transcribe_with_speechmatics
-# The correct import for resume extraction must be from a different file
-from utils.basic_details import get_ai_greeting_message, get_final_thanks_message, extract_resume_info_using_llm
-from utils.text_to_speech import speak_text
-from utils.analyze_candidate import analyze_candidate_response_and_generate_new_question
-
-from utils.evaluation import get_feedback_of_candidate_response, get_overall_evaluation_score
-from utils.save_interview_data import save_interview_data
-from utils.load_content import load_content_streamlit
+# ---- Your existing utils (unchanged) ----
+from utils import (
+    transcribe_with_speechmatics,
+    extract_resume_info_using_llm,
+    get_ai_greeting_message,
+    get_final_thanks_message,
+    speak_text,
+    analyze_candidate_response_and_generate_new_question,
+    get_feedback_of_candidate_response,
+    get_overall_evaluation_score,
+    save_interview_data,
+    load_content_streamlit,
+)
 
 # --------------------
 # App Constants
@@ -37,7 +34,7 @@ VOICE_CARDS = {
 }
 
 # --------------------
-# Page Setup + Global Styles (No changes here)
+# Page Setup + Global Styles
 # --------------------
 def setup_page_config():
     st.set_page_config(page_title="Interview Coach AI", page_icon="📝", layout="centered")
@@ -191,7 +188,7 @@ def setup_page_config():
     """, unsafe_allow_html=True)
 
 # --------------------
-# Session State (No changes here)
+# Session State
 # --------------------
 def initialize_session_state():
     defaults = {
@@ -275,23 +272,12 @@ def speak_current_question():
 def generate_next_question():
     if st.session_state["conversations"]:
         last = st.session_state["conversations"][-1]
-        
-        # --- FIX: Pass the correct arguments and parse the JSON output ---
-        llm_response_str, _ = asyncio.run(analyze_candidate_response_and_generate_new_question(
+        next_q, _ = asyncio.run(analyze_candidate_response_and_generate_new_question(
             last["Question"], last["Candidate Answer"],
             st.session_state["job_description"], st.session_state["resume_highlights"]
         ))
-        
-        try:
-            parsed_response = json.loads(llm_response_str)
-            next_q = parsed_response["next_question"]
-        except (json.JSONDecodeError, KeyError) as e:
-            st.error(f"Error parsing LLM response: {e}. Using a generic question.")
-            next_q = "Could you tell me more about your professional experience?"
-            
     else:
         next_q = "Tell me about yourself and your experience."
-        
     st.session_state["current_question"] = next_q
     st.session_state["messages"].append({"role":"assistant","content":next_q})
     st.session_state["question_spoken"] = False
@@ -299,21 +285,11 @@ def generate_next_question():
 
 def process_candidate_response(transcript):
     st.session_state["messages"].append({"role":"user","content":transcript})
-    
-    # --- FIX: Correctly handle LLM response parsing for both question and feedback ---
     if st.session_state["qa_index"] < st.session_state["max_questions"] - 1:
-        llm_response_str, _ = asyncio.run(analyze_candidate_response_and_generate_new_question(
+        next_q, feedback = asyncio.run(analyze_candidate_response_and_generate_new_question(
             st.session_state["current_question"], transcript,
             st.session_state["job_description"], st.session_state["resume_highlights"]
         ))
-        try:
-            parsed_response = json.loads(llm_response_str)
-            next_q = parsed_response["next_question"]
-            feedback = parsed_response["feedback"]
-        except (json.JSONDecodeError, KeyError) as e:
-            st.error(f"Error parsing LLM response: {e}. Using a generic question.")
-            next_q = "Could you tell me more about your professional experience?"
-            feedback = {"score": 5, "feedback": "An error occurred while processing this response."}
     else:
         feedback = asyncio.run(get_feedback_of_candidate_response(
             st.session_state["current_question"], transcript,
@@ -464,17 +440,41 @@ def main():
         st.subheader("Pick a Voice")
         st.markdown("Click on a card to select your interviewer's voice.")
         
-        # --- FIX: Replaced custom JS with a reliable Streamlit radio button ---
-        voice_options = list(VOICE_CARDS.keys())
-        selected_voice = st.radio(
-            "Choose a voice", 
-            voice_options, 
-            index=voice_options.index(st.session_state["ai_voice"]), 
-            horizontal=True,
-            key="ai_voice_selector"
-        )
-        st.session_state["ai_voice"] = selected_voice
-        st.write("Current voice: ", st.session_state["ai_voice"])
+        cols = st.columns(len(VOICE_CARDS))
+        keys = list(VOICE_CARDS.keys())
+        for i, key in enumerate(keys):
+            with cols[i]:
+                is_active = "selected" if key == st.session_state["ai_voice"] else ""
+                st.markdown(
+                    f"""
+                    <div class="voice-card {is_active}" onclick="window.dispatchEvent(new CustomEvent('voice_select', {{ detail: '{key}' }}));">
+                        <div class="voice-icon">{VOICE_CARDS[key]['icon']}</div>
+                        <div class="voice-title">{key}</div>
+                        <div class="voice-tag">{VOICE_CARDS[key]['tag']}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        
+        # This will be used to update the session state
+        voice_js = """
+            <script>
+            const voiceCards = document.querySelectorAll('.voice-card');
+            voiceCards.forEach(card => {
+                card.onclick = (e) => {
+                    const voiceName = e.currentTarget.querySelector('.voice-title').innerText;
+                    window.parent.document.querySelector('[data-testid="stHiddenInput"]').value = voiceName;
+                    window.parent.document.querySelector('[data-testid="stHiddenInput"]').dispatchEvent(new Event('change'));
+                };
+            });
+            </script>
+        """
+        st.markdown(voice_js, unsafe_allow_html=True)
+        
+        selected_voice = st.text_input("Selected voice (hidden)", value=st.session_state["ai_voice"], key="voice_select_input")
+        if selected_voice != st.session_state["ai_voice"]:
+            st.session_state["ai_voice"] = selected_voice
+            st.rerun()
 
         if st.session_state["name"]:
             st.markdown(f"<div class='container' style='background-color:#d4edda; color:#155724; border-color:#c3e6cb;'>You're all set, <b>{st.session_state['name']}</b>! Press the button below to start.</div>", unsafe_allow_html=True)
