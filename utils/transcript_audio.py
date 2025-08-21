@@ -1,30 +1,79 @@
-# utils/transcript_audio.py
-
-import requests
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from speechmatics.models import *
+import speechmatics
+import threading
 
-SPEECHMATICS_API_KEY = os.getenv("SPEECHMATICS_API_KEY")
-BASE_URL = "https://asr.api.speechmatics.com/v2"
 
-def transcribe_with_speechmatics(audio_file_path: str) -> str:
-    """
-    Send audio file to Speechmatics ASR and return the transcript.
-    """
-    if not SPEECHMATICS_API_KEY:
-        raise ValueError("SPEECHMATICS_API_KEY not set in .env")
+def transcribe_with_speechmatics(audio_path, transcription_language="en"):
+    """Transcribe audio using Speechmatics WebSocket client"""
+    api_key = os.environ.get("SPEECHMATICS_API_KEY")
 
-    headers = {"Authorization": f"Bearer {SPEECHMATICS_API_KEY}"}
-    files = {"audio": open(audio_file_path, "rb")}
+    if not api_key:
+        return "Transcription failed: No API key"
 
     try:
-        response = requests.post(f"{BASE_URL}/transcribe", headers=headers, files=files)
-        response.raise_for_status()
-        data = response.json()
-        # The actual key may differ depending on Speechmatics API response
-        transcript = data.get("results", {}).get("transcript", "")
-        return transcript
+        # Create transcription client
+        sm_client = speechmatics.client.WebsocketClient(api_key)
+
+        # Store transcription results
+        transcription_results = []
+        transcript_lock = threading.Lock()
+
+        # Handler for processing transcript additions
+        def process_transcript(message):
+            if "results" in message:
+                with transcript_lock:
+                    sentence_parts = []
+
+                    for result in message["results"]:
+                        if "alternatives" in result:
+                            if result["type"] == "word":
+                                content = result["alternatives"][0]["content"]
+                                # Add space before word if not first word
+                                if sentence_parts:
+                                    sentence_parts.append(" ")
+                                sentence_parts.append(content)
+                            elif result["type"] == "punctuation":
+                                content = result["alternatives"][0]["content"]
+                                sentence_parts.append(content)
+
+                    # Join the sentence parts and add to results
+                    if sentence_parts:
+                        sentence = "".join(sentence_parts)
+                        transcription_results.append(sentence)
+
+        # Add event handler (no partial transcript handler to reduce logs)
+        sm_client.add_event_handler(
+            event_name=ServerMessageType.AddTranscript,
+            event_handler=process_transcript,
+        )
+
+        # Configure transcription
+        conf = TranscriptionConfig(
+            language=transcription_language,
+            enable_partials=False,  # Disable partials to reduce logs
+            max_delay=5,
+        )
+
+        # Check if file exists and has content
+        if not os.path.exists(audio_path):
+            return f"Audio file not found: {audio_path}"
+
+        file_size = os.path.getsize(audio_path)
+        if file_size == 0:
+            return "No audio recorded"
+
+        # Run transcription
+        with open(audio_path, "rb") as audio_file:
+            sm_client.run_synchronously(audio_file, conf)
+
+        # Join all transcript segments
+        if transcription_results:
+            full_transcript = " ".join(transcription_results)
+            print(f"Transcript: {full_transcript}")
+            return full_transcript.strip()
+        else:
+            return "No speech detected in audio"
+
     except Exception as e:
-        print(f"Error transcribing audio: {e}")
-        return ""
+        return f"Transcription failed: {str(e)}"
