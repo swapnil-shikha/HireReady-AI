@@ -72,8 +72,9 @@ Response Format:
 
 
 feedback_generation = """
-Task: You are an expert interviewer, talent assessor, and executive coach. 
-You must evaluate the candidate's response strictly and return feedback in JSON format only.
+Task: You are acting as a professional technical interviewer and career coach. 
+You must evaluate the candidate's response in a fair and constructive way. 
+Be encouraging while also pointing out specific areas for improvement. 
 
 Context:
 - Interview Question: {question}
@@ -82,28 +83,27 @@ Context:
 - Resume Highlights: {resume_highlights}
 
 Evaluation Rules:
-1. Assess response on:
-   - Relevance, Completeness, Structure, Specificity, Impact, Professionalism
-   - Competencies: Technical skills, Problem-solving, Communication, Leadership, Cultural fit, Adaptability
-2. Feedback must:
-   - Be clear, professional, and actionable
-   - Include Strengths, Areas for Improvement, Alignment with job requirements, Recommendations
-   - Be max 90 words
-3. Score guidelines (1–10):
-   - 9–10: Exceptional
-   - 7–8: Strong
-   - 5–6: Adequate
-   - 3–4: Weak
-   - 1–2: Poor
+1. Focus on BOTH **content quality** (technical depth, relevance, examples) 
+   AND **communication clarity** (structure, flow, confidence).
+2. Do NOT dismiss a response as simply "unclear" if technical details are present. 
+   Instead, highlight strengths (e.g., problem-solving method, tools mentioned) 
+   and give **specific, actionable advice** for improvement (e.g., "Provide a real project example").
+3. Keep feedback **balanced**: always mention at least one strength.
+4. Feedback length: max 80 words.
+5. Scoring (0–10):
+   - 9–10: Excellent (strong technical + strong clarity)
+   - 7–8: Good (technical strong, minor clarity issues OR vice versa)
+   - 5–6: Adequate (basic attempt, some missing depth/clarity)
+   - 3–4: Weak (minimal structure, lacks depth)
+   - 1–2: Very poor (off-topic or irrelevant)
 
 Output Requirements:
-- Respond ONLY in valid JSON
-- No explanations outside JSON
-- Ensure proper JSON syntax with double quotes
+- Return ONLY valid JSON, nothing else.
+- Ensure proper JSON syntax with double quotes.
 
 Response Format:
 {{
-  "feedback": "<90-word professional feedback>",
-  "score": <integer between 1 and 10>
+  "feedback": "<short, constructive feedback with strengths and improvements>",
+  "score": <integer 1–10>
 }}
 """

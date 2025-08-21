@@ -4,14 +4,41 @@ from utils.prompts import basic_details
 
 
 def extract_resume_info_using_llm(resume_content):
-    # Use LLM to extract resume info
+    """
+    Extract candidate's name and resume highlights using an LLM.
+    This function is resilient to malformed or missing responses.
+    """
+
+    # Build the LLM prompt
     final_prompt = basic_details.format(resume_content=resume_content)
-    response = get_response_from_llm(final_prompt)
-    response = parse_json_response(response)
-    name = response["name"]
-    resume_highlights = response["resume_highlights"]
+
+    # Call the LLM
+    raw_response = get_response_from_llm(final_prompt)
+    print("🔍 RAW LLM RESPONSE:", raw_response)  # Debugging
+
+    # Parse into JSON/dict
+    response = parse_json_response(raw_response)
+    print("🔍 PARSED RESPONSE:", response)  # Debugging
+
+    # Handle invalid/missing responses
+    if not response or not isinstance(response, dict):
+        print("❌ Invalid response received from LLM. Falling back.")
+        return "Candidate", []
+
+    # Extract safely with defaults
+    name = response.get("name", "Candidate")
+    resume_highlights = response.get("resume_highlights", [])
+
+    # Ensure highlights is always a list
+    if not isinstance(resume_highlights, list):
+        resume_highlights = [str(resume_highlights)]
+
     return name, resume_highlights
 
+
+# ------------------------------
+# AI interview conversation helpers
+# ------------------------------
 
 ai_greeting_messages = [
     lambda name, interviewer_name: f"Hi {name}, welcome to this AI interview! My name is {interviewer_name} and I'll be your interviewer today. Let's get started!\n\nCan you tell me a bit about yourself and what you're looking for in a job?",
