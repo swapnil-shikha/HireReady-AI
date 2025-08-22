@@ -27,98 +27,233 @@ MAX_QUESTIONS = 5
 
 # Configuration and Styling
 def setup_page_config():
-    """Setup page configuration and custom CSS (dark + neon theme)"""
-    st.set_page_config(page_title="AI Interview App", layout="wide")
+    """Setup page configuration and custom CSS"""
+    st.set_page_config(page_title="HireReady AI", layout="wide")
 
     st.markdown(
-        """
-    <style>
-    /* --- Global --- */
-    :root{
-      --bg:#050507;
-      --panel:#0b0b0d;
-      --neon-green:#39ff14;
-      --neon-pink:#ff2d95;
-      --muted:#bfc3c7;
-    }
-    .stApp, body, .block-container{background-color:var(--bg) !important; color:var(--muted) !important}
+    """
+<style>
+/* Define a modern, clean white theme with cool blue/teal accents */
+:root {
+    --white-bg: #FFFFFF; /* Pure white background */
+    --light-gray: #F0F2F6; /* A very light gray for contrast */
+    --medium-gray: #C4C4C4; /* For borders or minor elements */
+    --text-color: #333333; /* Dark gray for main text readability */
+    --accent-teal: #3AB7B5; /* The professional teal accent color */
+    --soft-red: #D64545; /* A muted red for errors/warnings */
+    --shadow-color: rgba(58, 183, 181, 0.2); /* Softened glow for accents */
+}
 
-    /* --- Navbar --- */
-    .custom-navbar{
-        width:100%;
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        padding:14px 28px;
-        background:linear-gradient(90deg,#06060a, #0b0b0d);
-        border-bottom:1px solid rgba(57,255,20,0.12);
-        box-shadow:0 6px 30px rgba(0,0,0,0.7);
-        margin-bottom:18px;
-        z-index:1000;
-    }
-    .brand{display:flex; align-items:center; gap:12px}
-    .brand .logo{font-size:22px; color:var(--neon-green); font-weight:700; letter-spacing:1px}
-    .brand .subtitle{font-size:13px; color:var(--muted)}
-    .nav-links a{color:var(--neon-pink); text-decoration:none; margin-left:18px; font-weight:600}
-    .nav-links a:hover{color:var(--neon-green); text-shadow:0 0 12px rgba(57,255,20,0.18)}
+/* Core App Background (all elements) */
+body, .stApp, .css-h5rg8b {
+    color: var(--text-color);
+    background-color: var(--white-bg);
+}
 
-    /* --- Sidebar --- */
-    section[data-testid="stSidebar"]{background:linear-gradient(180deg,#070707,#0b0b0d) !important; border-right:1px solid rgba(255,45,149,0.06)}
-    section[data-testid="stSidebar"] .css-1d391kg p, section[data-testid="stSidebar"] .css-1d391kg label{color:var(--neon-green) !important}
-    section[data-testid="stSidebar"] .stFileUploader>div{border:1px dashed rgba(57,255,20,0.12) !important; background:#070707}
-    section[data-testid="stSidebar"] .stTextArea textarea, section[data-testid="stSidebar"] .stTextInput input, section[data-testid="stSidebar"] .stNumberInput input{background:#0b0b0d !important; color:var(--muted) !important; border:1px solid rgba(57,255,20,0.08); border-radius:8px}
-    section[data-testid="stSidebar"] .stButton>button{background:transparent; border:1px solid var(--neon-green); color:var(--neon-green); padding:8px 12px; border-radius:8px}
-    section[data-testid="stSidebar"] .stButton>button:hover{background:var(--neon-green); color:#050507}
+/* Streamlit Main Content */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid var(--accent-teal);
+    box-shadow: 0 0 10px var(--shadow-color);
+}
 
-    /* --- Main panels & cards --- */
-    .card{background:linear-gradient(180deg,#070709,#0d0d0f); padding:18px; border-radius:12px; border:1px solid rgba(255,45,149,0.06); box-shadow:0 8px 30px rgba(0,0,0,0.6);}
-    .muted{color:var(--muted)}
+/* Sidebar Styling */
+.css-1d391kg, .css-1l02z9c {
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid var(--accent-teal);
+    box-shadow: 0 0 10px var(--shadow-color);
+}
+.css-1l02z9c .css-1cpx97d {
+    background-color: var(--accent-teal);
+    color: var(--white-bg);
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    box-shadow: 0 0 5px var(--accent-teal);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.css-1l02z9c .css-1cpx97d:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px var(--accent-teal);
+}
 
-    /* --- Interview progress --- */
-    .interview-progress{background:linear-gradient(90deg, rgba(57,255,20,0.03), rgba(255,45,149,0.02)); border:1px solid rgba(57,255,20,0.08); padding:10px 14px; border-radius:10px; color:var(--neon-green); font-weight:600}
+/* General Button Styling */
+.stButton>button {
+    background-color: var(--accent-teal);
+    color: var(--white-bg);
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    box-shadow: 0 0 5px var(--accent-teal);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.stButton>button:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px var(--accent-teal);
+}
 
-    /* --- Chat bubbles --- */
-    .chat-wrap{display:flex; flex-direction:column; gap:12px}
-    .chat-bubble{max-width:78%; padding:14px 16px; border-radius:14px; font-size:15px; line-height:1.4}
-    .ai{background:linear-gradient(180deg,#07100a,#08120b); border:1px solid rgba(57,255,20,0.08); color:var(--neon-green); box-shadow:0 0 18px rgba(57,255,20,0.06)}
-    .user{align-self:flex-end; background:linear-gradient(180deg,#14050c,#160512); border:1px solid rgba(255,45,149,0.08); color:var(--neon-pink); box-shadow:0 0 18px rgba(255,45,149,0.06)}
+/* Text Areas & Inputs */
+.st-ag, .st-d9 {
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    border: 1px solid var(--accent-teal);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 0 3px var(--accent-teal) inset;
+}
+.st-ag textarea, .st-d9 input {
+    color: var(--text-color);
+}
+.st-ag textarea:focus, .st-d9 input:focus {
+    outline: none;
+    border-color: var(--accent-teal);
+    box-shadow: 0 0 5px var(--accent-teal);
+}
 
-    /* --- Audio section --- */
-    .audio-section{background:linear-gradient(90deg,#070707,#0b0710); padding:16px; border-radius:12px; border:1px dashed rgba(255,255,255,0.02);}
+/* Chat Messages */
+.chat-wrap {
+    display: flex;
+    flex-direction: column;
+}
 
-    /* Buttons */
-    .primary-btn{background:transparent; border:1px solid var(--neon-green); color:var(--neon-green); padding:8px 14px; border-radius:8px}
-    .primary-btn:hover{background:var(--neon-green); color:#050507}
+.chat-bubble {
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
 
-    /* Expander styling fix */
-    .streamlit-expanderHeader{background:transparent !important}
+.chat-bubble.ai {
+    align-self: flex-start;
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    border: 2px solid var(--accent-teal);
+}
 
-    /* ensure streamlit default header hidden to avoid white flash */
-    header[data-testid="stHeader"]{display:none}
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
+.chat-bubble.user {
+    align-self: flex-end;
+    background-color: var(--accent-teal);
+    color: var(--white-bg);
+    border: 2px solid var(--accent-teal);
+}
 
-    # Navbar (injected)
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--accent-teal);
+    text-shadow: none; /* No shadow for a cleaner look */
+}
+
+/* Spinner */
+.stSpinner>div>div {
+    border-top-color: var(--accent-teal);
+}
+
+/* Progress & Success messages */
+.interview-progress {
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 2px solid var(--accent-teal);
+    box-shadow: 0 0 5px var(--accent-teal);
+}
+.st-success {
+    background-color: var(--light-gray);
+    color: var(--accent-teal);
+    border: 1px solid var(--accent-teal);
+    box-shadow: 0 0 5px var(--accent-teal);
+    border-radius: 8px;
+}
+.st-error {
+    background-color: var(--light-gray);
+    color: var(--soft-red);
+    border: 1px solid var(--soft-red);
+    border-radius: 8px;
+}
+
+/* Expander */
+.st-ea {
+    border: 1px solid var(--accent-teal);
+    border-radius: 10px;
+    background-color: var(--light-gray);
+}
+
+/* Sidebar background again for emphasis */
+[data-testid="stSidebar"] {
+    background-color: var(--light-gray) !important;
+    color: var(--text-color) !important;
+}
+
+/* Sidebar labels & headers */
+[data-testid="stSidebar"] .css-1p0dtai,
+[data-testid="stSidebar"] .css-16idsys,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p {
+    color: var(--text-color) !important;
+    font-weight: 500;
+}
+
+/* Input fields */
+[data-testid="stSidebar"] textarea,
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] select {
+    background-color: var(--white-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--accent-teal) !important;
+    border-radius: 8px;
+}
+
+/* Dropdown / selectbox arrow */
+[data-testid="stSidebar"] svg {
+    fill: var(--accent-teal) !important;
+}
+
+/* Card Styling */
+.card {
+    background-color: var(--light-gray);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid var(--accent-teal);
+    box-shadow: 0 0 10px var(--shadow-color);
+    margin-bottom: 20px;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+# Navbar (injected)
     st.markdown(
         """
         <div class="custom-navbar">
             <div class="brand">
-                <div class="logo">🤖 HireReady AI</div>
-                <div class="subtitle">Practice • Feedback • Improve</div>
+            <h2>
+                <div class="logo" style="color:var(--text-color);">🤖 HireReady AI</div></h2>
+                <h5>
+                <div class="subtitle" style="color:var(--text-color);">Practice • Feedback • Improve</div></h5>
             </div>
             <div class="nav-links">
-                <a href="#instructions">Instructions</a>
-                <a href="#interview-chat">Interview</a>
-                <a href="#results">Results</a>
+                <a href="#instructions" style="color:var(--text-color);">Instructions</a>
+                <a href="#interview-chat" style="color:var(--text-color);">Interview</a>
+                <a href="#results" style="color:var(--text-color);">Results</a>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-
+    
 def initialize_session_state():
     """Initialize all session state variables"""
     defaults = {
@@ -160,8 +295,8 @@ def get_instructions():
     """Get instructions for the user"""
     content = """
     <div id="instructions" class="card">
-    <h3 style="color:var(--neon-green); margin-top:0">How to use HireReady AI</h3>
-    <ol style="color:var(--muted);">
+    <h3 style="color:var(--accent-teal); margin-top:0">How to use HireReady AI</h3>
+    <ol style="color:var(--text-color);">
       <li>Upload your resume (PDF).</li>
       <li>Paste the job description in the sidebar.</li>
       <li>Set maximum questions and choose voice.</li>
@@ -175,7 +310,7 @@ def get_instructions():
 
 def render_sidebar():
     """Render sidebar with candidate information and styled settings"""
-    st.sidebar.markdown("<h3 style='color:var(--neon-green)'>Candidate Information</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h3 style='color:var(--accent-teal)'>Candidate Information</h3>", unsafe_allow_html=True)
 
     # File upload
     uploaded_resume = st.sidebar.file_uploader("Upload your Resume (PDF)", type=["pdf"]) 
@@ -202,8 +337,8 @@ def render_sidebar():
     submit = st.sidebar.button("Submit")
 
     # Small footer in sidebar
-    st.sidebar.markdown("<hr style='border-color:rgba(57,255,20,0.06)'/>", unsafe_allow_html=True)
-    st.sidebar.markdown("<div style='font-size:12px;color:var(--muted)'>Theme: Dark • Neon</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr style='border-color:var(--accent-teal)'/>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div style='font-size:12px;color:var(--text-color)'>Theme: Professional • Navy • Teal</div>", unsafe_allow_html=True)
 
     return uploaded_resume, job_description, submit
 
@@ -489,40 +624,6 @@ def display_final_results():
             st.write(f"**Q:** {conv['Question']}")
             st.write(f"**A:** {conv['Candidate Answer']}")
             st.write(f"**Feedback:** {conv['Feedback']}")
-
-    st.markdown("""
-<style>
-/* Sidebar background */
-[data-testid="stSidebar"] {
-    background-color: #0d0d0d !important;
-    color: #39ff14 !important;
-}
-
-/* Sidebar labels & headers */
-[data-testid="stSidebar"] .css-1p0dtai, 
-[data-testid="stSidebar"] .css-16idsys, 
-[data-testid="stSidebar"] label, 
-[data-testid="stSidebar"] p {
-    color: #39ff14 !important;
-    font-weight: 500;
-}
-
-/* Input fields */
-[data-testid="stSidebar"] textarea, 
-[data-testid="stSidebar"] input, 
-[data-testid="stSidebar"] select {
-    background-color: #1a1a1a !important;
-    color: #39ff14 !important;
-    border: 1px solid #39ff14 !important;
-    border-radius: 8px;
-}
-
-/* Dropdown / selectbox arrow */
-[data-testid="stSidebar"] svg {
-    fill: #39ff14 !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
     # New interview option
     if st.button("Start New Interview"):
