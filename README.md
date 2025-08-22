@@ -1,6 +1,6 @@
-🧠 Interview Coach AI
+🤖HireReady AI
 
-Interview Coach AI is your ultimate interview sidekick 🎯. It turns your resume into a personalized practice session, asking tailored questions, evaluating your spoken answers, and giving detailed feedback—so you can walk into any interview confident and prepared.
+HireReady AI is your ultimate interview sidekick 🎯. It turns your resume into a personalized practice session, asking tailored questions, evaluating your spoken answers, and giving detailed feedback—so you can walk into any interview confident and prepared.
 
 🌟 Highlights
 
