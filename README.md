@@ -1,3 +1,5 @@
+<img src="https://www.shutterstock.com/image-illustration/ai-robot-hand-touching-virtual-260nw-2324320043.jpg width="200" height="200" />
+
 🤖HireReady AI
 
 HireReady AI is your ultimate interview sidekick 🎯. It turns your resume into a personalized practice session, asking tailored questions, evaluating your spoken answers, and giving detailed feedback—so you can walk into any interview confident and prepared.
