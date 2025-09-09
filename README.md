@@ -1,4 +1,4 @@
-<img src="https://www.shutterstock.com/image-illustration/ai-robot-hand-touching-virtual-260nw-2324320043.jpg width="200" height="200" />
+<img width="200" height="200" alt="image" src="https://github.com/user-attachments/assets/c7af6f8d-3221-4aa7-a80f-4818d40f6b8c" />
 
 🤖HireReady AI
 
@@ -17,6 +17,8 @@ Dynamic Interview Flow 🔄 – Each question adapts to your previous responses.
 Instant Scoring & Feedback 🏆 – Get scores, improvement tips, and suggestions.
 
 Full Transcript & Report 📊 – Review your session, track progress, and master your performance.
+
+Build with : Python + Streamlit
 
 🚀 How It Works
 
